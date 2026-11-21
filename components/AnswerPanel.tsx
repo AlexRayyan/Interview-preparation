@@ -139,7 +139,7 @@ export function AnswerPanel({ question, sessionId, mode, onGraded }: Props) {
       )}
       <div className="flex flex-wrap items-center gap-3">
         <button className="btn" disabled={pending || !answer.trim()} onClick={submit}>
-          {pending ? "Grading…" : mode === "ai" ? "Submit for AI feedback" : "Submit & compare"}
+          {pending ? (mode === "ai" ? "Grading…" : "Saving…") : mode === "ai" ? "Submit for AI feedback" : "Submit & compare"}
         </button>
         <button className="text-sm text-muted underline-offset-2 hover:text-fg hover:underline" onClick={() => setShowAnswer(true)}>
           Skip & show answer

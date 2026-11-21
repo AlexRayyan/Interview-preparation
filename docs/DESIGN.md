@@ -73,6 +73,7 @@ flowchart LR
 - **Progress:** average score, weakest topics, recent sessions.
 - **Companies:** questions grouped by the company that asked them.
 - **Share an interview:** link to the GitHub issue form.
+- **Tutorial:** a 2-minute captioned video tour (`public/tutorial.mp4`).
 
 ## 8. Limits and risks
 

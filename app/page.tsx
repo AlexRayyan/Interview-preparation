@@ -24,6 +24,9 @@ export default function Home() {
           <LinkButton href="/questions" ghost>
             Browse questions
           </LinkButton>
+          <LinkButton href="/tutorial" ghost>
+            ▶ Watch the 2-minute tour
+          </LinkButton>
         </div>
       </section>
 

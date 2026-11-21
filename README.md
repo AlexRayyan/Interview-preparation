@@ -4,7 +4,7 @@ A free website for practicing real interview questions, collected from open sour
 
 **Live site:** https://alexrayyan.github.io/Interview-preparation/ (after the one-time setup below)
 
-See the [design document](docs/DESIGN.md) for a short overview of how everything fits together.
+▶ **[Watch the 2-minute tutorial video](public/tutorial.mp4)** (also on the site's Tutorial page) · 📄 [Design document](docs/DESIGN.md)
 
 ## Features
 
