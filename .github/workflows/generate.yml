@@ -26,6 +26,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  models: read # free GitHub Models inference
 
 jobs:
   generate:
@@ -40,7 +41,11 @@ jobs:
       - name: Generate
         run: npm run generate -- --role "$ROLE" --category "$CATEGORY" --difficulty "$DIFFICULTY" --count "$COUNT" --company "$COMPANY"
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Free AI via GitHub Models using the built-in token. To use another OpenAI-compatible provider,
+          # set the AI_API_KEY secret and the AI_BASE_URL / AI_MODEL repository variables.
+          AI_API_KEY: ${{ secrets.AI_API_KEY || github.token }}
+          AI_BASE_URL: ${{ vars.AI_BASE_URL }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
           ROLE: ${{ inputs.role }}
           CATEGORY: ${{ inputs.category }}
           DIFFICULTY: ${{ inputs.difficulty }}

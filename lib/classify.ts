@@ -83,7 +83,7 @@ const DOMAIN_TERMS = new RegExp(
 
 /**
  * Heuristic extraction of interview questions from free text (Reddit/HN/Stack Exchange posts,
- * user submissions). Used when no Claude API key is configured. Output goes to the review queue.
+ * user submissions). Used when no AI provider is configured. Output goes to the review queue.
  */
 export function heuristicExtract(body: string, opts: { requireDomainTerms?: boolean; allowPersonal?: boolean } = {}): string[] {
   const requireDomain = opts.requireDomainTerms ?? true;

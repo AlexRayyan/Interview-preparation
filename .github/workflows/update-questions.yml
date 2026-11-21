@@ -11,12 +11,13 @@ on:
         description: "Comma-separated sources"
         default: "github,hackernews,stackexchange,reddit"
       answers:
-        description: "Max model answers to write with Claude this run"
-        default: "40"
+        description: "Max model answers to write with AI this run"
+        default: "60"
 
 permissions:
   contents: write
   pull-requests: write
+  models: read # free GitHub Models inference
 
 concurrency:
   group: question-bank
@@ -38,7 +39,11 @@ jobs:
         env:
           SOURCES: ${{ inputs.sources || 'github,hackernews,stackexchange,reddit' }}
           ANSWERS: ${{ inputs.answers || '40' }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Free AI via GitHub Models using the built-in token. To use another OpenAI-compatible provider,
+          # set the AI_API_KEY secret and the AI_BASE_URL / AI_MODEL repository variables.
+          AI_API_KEY: ${{ secrets.AI_API_KEY || github.token }}
+          AI_BASE_URL: ${{ vars.AI_BASE_URL }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
           REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
           REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
           REDDIT_USER_AGENT: ${{ vars.REDDIT_USER_AGENT }}

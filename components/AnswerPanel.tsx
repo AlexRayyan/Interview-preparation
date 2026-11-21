@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { gradeAnswer, type Feedback } from "@/lib/ai";
-import { addAttempt, getApiKey, setAttemptScore } from "@/lib/progress";
+import { addAttempt, getAiSettings, setAttemptScore } from "@/lib/progress";
 import type { Question } from "@/lib/types";
 import { Markdown } from "./Markdown";
 
@@ -26,18 +26,20 @@ export function AnswerPanel({ question, sessionId, mode, onGraded }: Props) {
       setError(null);
       const text = answer.trim();
       if (!text) return;
-      const apiKey = getApiKey();
-      if (mode === "ai" && apiKey) {
+      const ai = getAiSettings();
+      if (mode === "ai" && ai) {
         try {
-          const feedback = await gradeAnswer({
-            question: question.text,
-            category: question.category,
-            role: question.role,
-            difficulty: question.difficulty,
-            referenceAnswer: question.answer,
-            answer: text,
-            apiKey,
-          });
+          const feedback = await gradeAnswer(
+            {
+              question: question.text,
+              category: question.category,
+              role: question.role,
+              difficulty: question.difficulty,
+              referenceAnswer: question.answer,
+              answer: text,
+            },
+            { baseUrl: ai.baseUrl.replace(/\/+$/, ""), apiKey: ai.apiKey, model: ai.model },
+          );
           const index = addAttempt({ questionId: question.id, sessionId, answer: text, score: feedback.score, feedback, gradedBy: "ai" });
           setResult({ index, feedback });
           onGraded?.(feedback.score);

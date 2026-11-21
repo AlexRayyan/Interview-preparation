@@ -38,5 +38,5 @@ export function parseIssueForm(body: string): Record<string, string> {
   });
   store.markSeen(`user:issue-${number}`);
   store.save();
-  writeSummary(`Questions from issue #${number}`, [`Extraction: ${aiEnabled() ? "Claude" : "heuristic"} (${res.note})`], store.added);
+  writeSummary(`Questions from issue #${number}`, [`Extraction: ${aiEnabled() ? "AI" : "heuristic"} (${res.note})`], store.added);
 })();

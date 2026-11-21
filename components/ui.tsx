@@ -50,7 +50,7 @@ export function AiNotice() {
     <div className="card border-warn/40 bg-warn/5 p-4 text-sm">
       <strong className="font-medium">AI grading is off.</strong>{" "}
       <span className="text-muted">
-        You&apos;ll compare against model answers and rate yourself. To get AI feedback on every answer, add your own Anthropic API key in{" "}
+        You&apos;ll compare against model answers and rate yourself. To get AI feedback on every answer, connect a free AI provider (OpenRouter, Groq or Gemini) in{" "}
         <Link href="/settings" className="text-accent underline">
           Settings
         </Link>

@@ -24,7 +24,7 @@ export interface Session {
 
 const KEY_ATTEMPTS = "dataprep.attempts.v1";
 const KEY_SESSIONS = "dataprep.sessions.v1";
-const KEY_API = "dataprep.anthropicKey";
+const KEY_API = "dataprep.aiSettings.v1";
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -87,16 +87,45 @@ export function completeSession(id: string) {
   );
 }
 
-export function getApiKey(): string | null {
-  try {
-    return localStorage.getItem(KEY_API);
-  } catch {
-    return null;
-  }
+export interface AiSettings {
+  provider: string; // preset id from AI_PRESETS, or "custom"
+  baseUrl: string;
+  model: string;
+  apiKey: string;
 }
-export function setApiKey(key: string | null) {
+
+/** Free (or free-tier) OpenAI-compatible providers visitors can use for AI grading. */
+export const AI_PRESETS = [
+  {
+    id: "openrouter",
+    name: "OpenRouter (free models)",
+    baseUrl: "https://openrouter.ai/api/v1",
+    model: "meta-llama/llama-3.3-70b-instruct:free",
+    keyUrl: "https://openrouter.ai/keys",
+  },
+  {
+    id: "groq",
+    name: "Groq (free tier)",
+    baseUrl: "https://api.groq.com/openai/v1",
+    model: "llama-3.3-70b-versatile",
+    keyUrl: "https://console.groq.com/keys",
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini (free tier)",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    model: "gemini-2.5-flash",
+    keyUrl: "https://aistudio.google.com/apikey",
+  },
+] as const;
+
+export function getAiSettings(): AiSettings | null {
+  const s = read<AiSettings | null>(KEY_API, null);
+  return s && s.apiKey && s.baseUrl && s.model ? s : null;
+}
+export function setAiSettings(s: AiSettings | null) {
   try {
-    if (key) localStorage.setItem(KEY_API, key);
+    if (s) localStorage.setItem(KEY_API, JSON.stringify(s));
     else localStorage.removeItem(KEY_API);
   } catch {
     /* ignore */

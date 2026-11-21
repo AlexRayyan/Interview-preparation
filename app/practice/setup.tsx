@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { pickPractice } from "@/lib/bank";
-import { bestScores, createSession, getApiKey } from "@/lib/progress";
+import { bestScores, createSession, getAiSettings } from "@/lib/progress";
 import { CATEGORIES, DIFFICULTIES, isCategory, isDifficulty, type Category, type Role } from "@/lib/taxonomy";
 import { AiNotice, PageHeader } from "@/components/ui";
 
@@ -12,7 +12,7 @@ export function PracticeSetup() {
   const sp = useSearchParams();
   const [hasKey, setHasKey] = useState(false);
   const [empty, setEmpty] = useState(false);
-  useEffect(() => setHasKey(Boolean(getApiKey())), []);
+  useEffect(() => setHasKey(Boolean(getAiSettings())), []);
 
   const start = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

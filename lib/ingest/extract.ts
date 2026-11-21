@@ -1,4 +1,4 @@
-import { aiEnabled, extractQuestions } from "../ai";
+import { aiEnabled, extractBatch, extractQuestions, type Extraction } from "../ai";
 import { classifyCategory, classifyDifficulty, classifyRole, guessCompany, heuristicExtract } from "../classify";
 import type { Store } from "../store";
 import { isCategory, isRole, type SourceType } from "../taxonomy";
@@ -56,23 +56,8 @@ export async function processPost(store: Store, p: RawPostInput, opts: { useAi?:
 
   if (useAi) {
     const ex = await extractQuestions({ source: p.source, title: p.title, body: p.body });
-    if (!ex.relevant) return { added: 0, method: "ai", note: "not relevant" };
-    for (const q of ex.questions) {
-      if (
-        store.insert({
-          ...base,
-          text: q.text,
-          category: q.category,
-          difficulty: q.difficulty,
-          role: isRole(p.hint_role) && q.role === "both" ? p.hint_role : q.role,
-          company: p.company ?? ex.company,
-          round: q.round,
-          extracted_by: "ai",
-        })
-      )
-        added++;
-    }
-    return { added, method: "ai", note: `${ex.questions.length} extracted, ${added} new` };
+    added = insertExtraction(store, p, ex);
+    return { added, method: "ai", note: ex.relevant ? `${ex.questions.length} extracted, ${added} new` : "not relevant" };
   }
 
   const company = p.company ?? guessCompany(`${p.title ?? ""}\n${p.body}`);
@@ -93,4 +78,39 @@ export async function processPost(store: Store, p: RawPostInput, opts: { useAi?:
       added++;
   }
   return { added, method: "heuristic", note: `${added} new (heuristic)` };
+}
+
+function insertExtraction(store: Store, p: RawPostInput, ex: Extraction): number {
+  if (!ex.relevant) return 0;
+  let added = 0;
+  for (const q of ex.questions) {
+    if (
+      store.insert({
+        source_type: p.source as SourceType,
+        source_url: p.url ?? null,
+        source_title: p.title ?? null,
+        attribution: attributionFor(p),
+        text: q.text,
+        category: q.category,
+        difficulty: q.difficulty,
+        role: isRole(p.hint_role) && q.role === "both" ? p.hint_role : q.role,
+        company: p.company ?? ex.company ?? null,
+        round: q.round ?? null,
+        extracted_by: "ai",
+      })
+    )
+      added++;
+  }
+  return added;
+}
+
+/** AI extraction for several free-text posts in one request. Returns how many questions were added. */
+export async function processBatchAi(store: Store, posts: RawPostInput[]): Promise<number> {
+  const results = await extractBatch(posts.map((p) => ({ source: p.source, title: p.title, body: p.body })));
+  let added = 0;
+  posts.forEach((p, i) => {
+    const ex = results.get(i);
+    if (ex) added += insertExtraction(store, p, ex);
+  });
+  return added;
 }
