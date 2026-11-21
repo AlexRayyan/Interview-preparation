@@ -28,6 +28,7 @@ A free website for practicing real interview questions, collected from open sour
 | `deploy.yml` | push to `main`, manual | Typechecks, builds the static site, publishes to Pages (PRs are build-checked only) |
 | `update-questions.yml` | Mondays 03:17 UTC, manual | Collects from all sources, extracts and classifies questions, writes missing model answers, opens a PR |
 | `submission.yml` | `approved` label on an issue | Extracts questions from a "Share your interview" issue, commits them, comments, closes the issue, redeploys |
+| `ai-check.yml` | manual | Sends one test request to the configured AI provider and reports whether it works |
 | `generate.yml` | manual | AI writes new questions for a chosen topic / difficulty / company style and opens a PR |
 
 The question bank is a readable JSON file (`data/questions.json`), so every change is a normal diff you can review.
@@ -36,12 +37,16 @@ The question bank is a readable JSON file (`data/questions.json`), so every chan
 
 1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
 2. **Settings → Actions → General → Workflow permissions:** choose *Read and write permissions* and tick *Allow GitHub Actions to create and approve pull requests*.
-3. **AI is free and needs no setup**: the workflows use [GitHub Models](https://docs.github.com/en/github-models) through the built-in `GITHUB_TOKEN` (default model `openai/gpt-4.1-mini`). Optional, under **Settings → Secrets and variables → Actions**:
-   - Variable `AI_MODEL` to pick another GitHub Models model (e.g. an open-weight Llama or DeepSeek model).
-   - To use a different OpenAI-compatible provider (Groq, OpenRouter, Gemini, a self-hosted Ollama…): secret `AI_API_KEY` plus variables `AI_BASE_URL` and `AI_MODEL`.
-   - Secrets `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` enable the Reddit source (free "script" app at reddit.com/prefs/apps); `STACKEXCHANGE_KEY` raises the Stack Exchange quota.
+3. **Free AI (recommended):** create a free key at one of these and add it under **Settings → Secrets and variables → Actions → New repository secret**:
+   - `GROQ_API_KEY` from https://console.groq.com/keys (open-source Llama models, no credit card), **or**
+   - `GEMINI_API_KEY` from https://aistudio.google.com/apikey, **or**
+   - `OPENROUTER_API_KEY` from https://openrouter.ai/keys (free `:free` models).
 
-   Free tiers allow roughly 150 requests a day, so the pipeline sends several posts per request, spaces calls out, and leaves anything over the limit for the next run.
+   Then run **Actions → Check AI connection** to confirm it works. Optional: variable `AI_MODEL` picks a different model; secret `AI_API_KEY` plus variables `AI_BASE_URL` / `AI_MODEL` use any other OpenAI-compatible provider (e.g. a self-hosted Ollama). With no key, the pipeline tries GitHub Models through the built-in token, and falls back to keyword heuristics if that's unavailable.
+
+   Free tiers have daily limits, so the pipeline sends several posts per request, spaces calls out, and leaves anything over the limit for the next run.
+
+   Also optional: secrets `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` enable the Reddit source (free "script" app at reddit.com/prefs/apps); `STACKEXCHANGE_KEY` raises the Stack Exchange quota.
 4. **Issues → Labels:** create `approved` (`interview-submission` and `question-bank` are created automatically when first used, or create them too).
 5. **Actions → Deploy site → Run workflow** for the first deploy, then **Update question bank → Run workflow** to collect from every source right away.
 
@@ -66,7 +71,7 @@ npm run update-bank -- --sources github       # refresh data/questions.json
 AI_API_KEY=<github token or provider key> npm run generate -- --role data_engineer --category pipelines --difficulty medium --count 5
 ```
 
-Stack: Next.js 15 (static export), React 19, Tailwind 4, TypeScript, any OpenAI-compatible AI API (GitHub Models by default).
+Stack: Next.js 15 (static export), React 19, Tailwind 4, TypeScript, any OpenAI-compatible AI API (Groq, Gemini, OpenRouter, GitHub Models, Ollama…).
 
 ## Privacy
 

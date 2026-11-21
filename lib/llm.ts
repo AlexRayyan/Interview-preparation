@@ -12,16 +12,32 @@ export interface LlmConfig {
 export const DEFAULT_BASE_URL = "https://models.github.ai/inference";
 export const DEFAULT_MODEL = "openai/gpt-4.1-mini";
 
-/** Server-side config from environment variables (GitHub Actions / local scripts). Empty strings count as unset. */
+/** Free providers picked up automatically from a secret named after them (checked in this order). */
+const KEYED_PROVIDERS = [
+  { env: "GROQ_API_KEY", baseUrl: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile" },
+  { env: "GEMINI_API_KEY", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-flash" },
+  { env: "OPENROUTER_API_KEY", baseUrl: "https://openrouter.ai/api/v1", model: "meta-llama/llama-3.3-70b-instruct:free" },
+] as const;
+
+/**
+ * Server-side config from environment variables (GitHub Actions / local scripts). Empty strings count as unset.
+ * Precedence: AI_API_KEY (+ AI_BASE_URL / AI_MODEL) > GROQ_API_KEY > GEMINI_API_KEY > OPENROUTER_API_KEY > GITHUB_TOKEN (GitHub Models).
+ * AI_MODEL overrides the model in every case.
+ */
 export function envConfig(): LlmConfig | null {
   const env = typeof process !== "undefined" ? process.env : ({} as Record<string, string | undefined>);
-  const apiKey = env.AI_API_KEY || env.GITHUB_TOKEN || "";
-  if (!apiKey) return null;
-  return {
-    baseUrl: (env.AI_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, ""),
-    apiKey,
-    model: env.AI_MODEL || DEFAULT_MODEL,
-  };
+  const model = env.AI_MODEL || "";
+  if (env.AI_API_KEY) {
+    return { baseUrl: (env.AI_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, ""), apiKey: env.AI_API_KEY, model: model || DEFAULT_MODEL };
+  }
+  for (const p of KEYED_PROVIDERS) {
+    const key = env[p.env];
+    if (key) return { baseUrl: p.baseUrl, apiKey: key, model: model || p.model };
+  }
+  if (env.GITHUB_TOKEN && env.AI_USE_GITHUB_MODELS !== "false") {
+    return { baseUrl: (env.AI_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, ""), apiKey: env.GITHUB_TOKEN, model: model || DEFAULT_MODEL };
+  }
+  return null;
 }
 
 export class RateLimitError extends Error {

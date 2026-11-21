@@ -24,6 +24,8 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
   process.env.AI_MIN_INTERVAL_MS ||= "4500"; // ~13 requests/minute, under free-tier limits
   const log: string[] = [`Extraction: ${cfg ? `AI (${cfg.model} via ${new URL(cfg.baseUrl).host})` : "heuristic (no AI provider configured)"}`, ""];
   let rateLimited = false;
+  let consecutiveFailures = 0;
+  const aiBroken = () => rateLimited || consecutiveFailures >= 3; // stop wasting requests on a failing provider
 
   // 1. curated starter set (idempotent)
   let seeded = 0;
@@ -45,13 +47,15 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
     if (aiEnabled()) {
       for (let i = 0; i < freeText.length; i += POSTS_PER_REQUEST) {
         const batch = freeText.slice(i, i + POSTS_PER_REQUEST);
-        if (rateLimited || processed >= maxAiPosts) { deferred += batch.length; continue; }
+        if (aiBroken() || processed >= maxAiPosts) { deferred += batch.length; continue; }
         try {
           added += await processBatchAi(store, batch);
           processed += batch.length;
+          consecutiveFailures = 0;
           batch.forEach((p) => store.markSeen(postKey(p)));
         } catch (e) {
           if (e instanceof RateLimitError) rateLimited = true;
+          else consecutiveFailures++;
           deferred += batch.length;
           console.error(`  ${r.source} batch ${i / POSTS_PER_REQUEST}: ${errMsg(e)}`);
         }
@@ -67,7 +71,7 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
   }
 
   // 3. model answers for questions that don't have one yet
-  if (aiEnabled() && answerBudget > 0 && !rateLimited) {
+  if (aiEnabled() && answerBudget > 0 && !aiBroken()) {
     const todo = store.bank.questions.filter((q) => !q.answer).slice(0, answerBudget);
     let written = 0;
     for (let i = 0; i < todo.length; i += ANSWERS_PER_REQUEST) {
@@ -80,12 +84,15 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
         });
       } catch (e) {
         console.error(`  answers batch ${i / ANSWERS_PER_REQUEST}: ${errMsg(e)}`);
-        if (e instanceof RateLimitError) { rateLimited = true; break; }
+        if (e instanceof RateLimitError) rateLimited = true;
+        else consecutiveFailures++;
+        if (aiBroken()) break;
       }
     }
     log.push(`- Model answers: ${written} written, ${store.bank.questions.filter((q) => !q.answer).length} questions still without one`);
   }
   if (rateLimited) log.push("", "_The AI provider's free-tier rate limit was reached; remaining work continues on the next run._");
+  else if (aiBroken()) log.push("", "**The AI provider kept failing, so AI work stopped early.** Run the \"Check AI connection\" workflow to see why; nothing was lost, unprocessed posts are retried next run.");
 
   store.save();
   writeSummary("Question bank update", log, store.added);

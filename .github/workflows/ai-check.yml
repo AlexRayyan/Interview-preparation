@@ -1,6 +1,7 @@
 name: Check AI connection
 
-# Manual diagnostic: sends one tiny request to the configured AI provider and prints the raw response.
+# Manual diagnostic: sends one tiny request to the configured AI provider (same selection rules as the
+# data pipeline) and prints the result.
 on:
   workflow_dispatch:
 
@@ -12,20 +13,19 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Call the chat completions endpoint
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Call the AI provider
+        run: npx tsx scripts/ai-check.ts
         env:
-          AI_API_KEY: ${{ secrets.AI_API_KEY || github.token }}
-          AI_BASE_URL: ${{ vars.AI_BASE_URL || 'https://models.github.ai/inference' }}
-          AI_MODEL: ${{ vars.AI_MODEL || 'openai/gpt-4.1-mini' }}
-        run: |
-          echo "Endpoint: $AI_BASE_URL/chat/completions  Model: $AI_MODEL"
-          curl -sS -i -X POST "$AI_BASE_URL/chat/completions" \
-            -H "Authorization: Bearer $AI_API_KEY" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: application/json" \
-            -d "{\"model\":\"$AI_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the word pong.\"}],\"max_tokens\":10}" \
-            | head -c 3000
-          echo
-          echo "--- catalog (first models)"
-          curl -sS https://models.github.ai/catalog/models -H "Authorization: Bearer $AI_API_KEY" | head -c 1500
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          AI_BASE_URL: ${{ vars.AI_BASE_URL }}
+          AI_MODEL: ${{ vars.AI_MODEL }}

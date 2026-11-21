@@ -41,9 +41,14 @@ jobs:
       - name: Generate
         run: npm run generate -- --role "$ROLE" --category "$CATEGORY" --difficulty "$DIFFICULTY" --count "$COUNT" --company "$COMPANY"
         env:
-          # Free AI via GitHub Models using the built-in token. To use another OpenAI-compatible provider,
-          # set the AI_API_KEY secret and the AI_BASE_URL / AI_MODEL repository variables.
-          AI_API_KEY: ${{ secrets.AI_API_KEY || github.token }}
+          # Free AI: add ONE of the GROQ_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY secrets (free keys).
+          # Any other OpenAI-compatible provider: AI_API_KEY secret + AI_BASE_URL / AI_MODEL variables.
+          # With none of them, GitHub Models is tried via the built-in token.
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
           AI_BASE_URL: ${{ vars.AI_BASE_URL }}
           AI_MODEL: ${{ vars.AI_MODEL }}
           ROLE: ${{ inputs.role }}
