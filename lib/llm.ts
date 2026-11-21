@@ -46,10 +46,17 @@ interface ChatMessage {
 
 async function chat(cfg: LlmConfig, messages: ChatMessage[], opts: { maxTokens: number; json: boolean }): Promise<string> {
   await throttle();
+  const isGitHub = /(^|\.)github\.ai$/.test(new URL(cfg.baseUrl).hostname);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${cfg.apiKey}`,
+    // GitHub Models expects GitHub's REST headers
+    ...(isGitHub ? { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" } : { Accept: "application/json" }),
+  };
   const send = (json: boolean) =>
     fetch(`${cfg.baseUrl}/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` },
+      headers,
       body: JSON.stringify({
         model: cfg.model,
         messages,
@@ -70,7 +77,13 @@ async function chat(cfg: LlmConfig, messages: ChatMessage[], opts: { maxTokens: 
     throw new RateLimitError(`Rate limited by ${new URL(cfg.baseUrl).host}`, Number.isFinite(ra) && ra > 0 ? ra : null);
   }
   if (!res.ok) throw new Error(`${res.status} from ${new URL(cfg.baseUrl).host}: ${(await res.text()).slice(0, 300)}`);
-  const data = (await res.json()) as { choices?: { message?: { content?: string | null }; finish_reason?: string }[] };
+  const raw = await res.text();
+  let data: { choices?: { message?: { content?: string | null }; finish_reason?: string }[] };
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error(`Non-JSON ${res.status} response from ${cfg.baseUrl}/chat/completions (content-type ${res.headers.get("content-type")}): ${JSON.stringify(raw.slice(0, 200))}`);
+  }
   const choice = data.choices?.[0];
   if (!choice?.message?.content) throw new Error(`Empty response from ${cfg.model}`);
   if (choice.finish_reason === "length") throw new Error(`Response from ${cfg.model} was cut off (max_tokens)`);

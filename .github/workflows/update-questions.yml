@@ -13,6 +13,9 @@ on:
       answers:
         description: "Max model answers to write with AI this run"
         default: "60"
+      limit:
+        description: "Max posts to fetch per source"
+        default: "100"
 
 permissions:
   contents: write
@@ -35,7 +38,7 @@ jobs:
       - run: npm ci
       - name: Collect and extract questions
         id: collect
-        run: npm run update-bank -- --sources "$SOURCES" --answers "$ANSWERS"
+        run: npm run update-bank -- --sources "$SOURCES" --answers "$ANSWERS" --limit "$LIMIT"
         env:
           SOURCES: ${{ inputs.sources || 'github,hackernews,stackexchange,reddit' }}
           ANSWERS: ${{ inputs.answers || '40' }}
