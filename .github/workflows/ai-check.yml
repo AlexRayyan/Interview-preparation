@@ -1,0 +1,31 @@
+name: Check AI connection
+
+# Manual diagnostic: sends one tiny request to the configured AI provider and prints the raw response.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  models: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the chat completions endpoint
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY || github.token }}
+          AI_BASE_URL: ${{ vars.AI_BASE_URL || 'https://models.github.ai/inference' }}
+          AI_MODEL: ${{ vars.AI_MODEL || 'openai/gpt-4.1-mini' }}
+        run: |
+          echo "Endpoint: $AI_BASE_URL/chat/completions  Model: $AI_MODEL"
+          curl -sS -i -X POST "$AI_BASE_URL/chat/completions" \
+            -H "Authorization: Bearer $AI_API_KEY" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            -d "{\"model\":\"$AI_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the word pong.\"}],\"max_tokens\":10}" \
+            | head -c 3000
+          echo
+          echo "--- catalog (first models)"
+          curl -sS https://models.github.ai/catalog/models -H "Authorization: Bearer $AI_API_KEY" | head -c 1500
