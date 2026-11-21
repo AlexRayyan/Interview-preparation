@@ -77,7 +77,7 @@ export async function processPost(store: Store, p: RawPostInput, opts: { useAi?:
 
   const company = p.company ?? guessCompany(`${p.title ?? ""}\n${p.body}`);
   // user submissions are explicitly about interviews, so domain keywords aren't required there
-  for (const text of heuristicExtract(p.body, { requireDomainTerms: p.source !== "user" })) {
+  for (const text of heuristicExtract(p.body, { requireDomainTerms: p.source !== "user", allowPersonal: p.source === "user" })) {
     const category = classifyCategory(text, isCategory(p.hint_category) ? p.hint_category : null);
     if (
       store.insert({

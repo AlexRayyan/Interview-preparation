@@ -66,6 +66,9 @@ export function classifyDifficulty(text: string): Difficulty {
 const QUESTION_START =
   /^(what|why|how|when|which|who|where|explain|describe|design|write|find|given|calculate|compute|compare|walk|tell|implement|build|suppose|imagine|if you|list|define|can you|could you|would you|do you|is it|are there|difference between|return|identify|create|model)\b/i;
 
+const PERSONAL = /\b(i|i'm|i've|i'd|my|me|mine|we|our|us)\b/i;
+const DANGLING = /^(also|so|but|and|or|then|besides|however|which one|is this|is it possible|how can this|what if we|can i)\b/i;
+
 const IMPERATIVE = /^(design|write|explain|implement|describe|walk me through|tell me about|model|calculate|compute)\b/i;
 
 const META_QUESTION =
@@ -82,7 +85,7 @@ const DOMAIN_TERMS = new RegExp(
  * Heuristic extraction of interview questions from free text (Reddit/HN/Stack Exchange posts,
  * user submissions). Used when no Claude API key is configured. Output goes to the review queue.
  */
-export function heuristicExtract(body: string, opts: { requireDomainTerms?: boolean } = {}): string[] {
+export function heuristicExtract(body: string, opts: { requireDomainTerms?: boolean; allowPersonal?: boolean } = {}): string[] {
   const requireDomain = opts.requireDomainTerms ?? true;
   const text = body
     .replace(/\r/g, "")
@@ -114,6 +117,10 @@ export function heuristicExtract(body: string, opts: { requireDomainTerms?: bool
         /^(they asked|asked me|i was asked|question:)/i.test(t);
       if (!looksLikeQuestion) continue;
       if (META_QUESTION.test(t)) continue;
+      if (!opts.allowPersonal && PERSONAL.test(t)) continue; // "my query", "I was wondering…": about the poster, not standalone
+      if (DANGLING.test(t)) continue; // "Also, …", "So my question…": depends on earlier context
+      if (/https?:|&#x|\$\[|\bthis\b (query|code|table|one)|\bthat\b (query|code)|\babove\b/i.test(t)) continue; // links, encoding junk, references to unseen context
+      if (t.split(/\s+/).length < 6) continue;
       if (requireDomain && !DOMAIN_TERMS.test(t)) continue;
       const q = t.replace(/^(they asked( me)?|asked me|i was asked|question:)\s*(to\s+)?/i, "").trim();
       pieces.push(q.charAt(0).toUpperCase() + q.slice(1));
