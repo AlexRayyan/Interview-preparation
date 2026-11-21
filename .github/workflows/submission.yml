@@ -1,0 +1,55 @@
+name: Add community submission
+
+# When a maintainer adds the "approved" label to a "Share your interview" issue,
+# extract the questions, commit them to main (which redeploys the site) and close the issue.
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+  actions: write # to start the deploy workflow after committing
+
+concurrency:
+  group: question-bank
+  cancel-in-progress: false
+
+jobs:
+  add:
+    if: github.event.label.name == 'approved' && contains(github.event.issue.labels.*.name, 'interview-submission')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Extract questions from the issue
+        run: npm run add-submission
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          SUMMARY_FILE: ${{ runner.temp }}/summary.md
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/*.json
+          if git diff --cached --quiet; then echo "No new questions"; exit 0; fi
+          git commit -m "Add questions from issue #${{ github.event.issue.number }}"
+          git push
+      - name: Comment and close
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --body-file "${{ runner.temp }}/summary.md"
+          gh issue close ${{ github.event.issue.number }} --repo ${{ github.repository }} --reason completed
+      - name: Deploy the updated site
+        # pushes made with GITHUB_TOKEN don't trigger other workflows, so start the deploy explicitly
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --repo ${{ github.repository }} --ref main

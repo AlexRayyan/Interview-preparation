@@ -1,1 +1,71 @@
-# Interview-preparation
+# DataPrep: interview practice for Data Analysts & Data Engineers
+
+A free website for practicing real interview questions, collected from open sources and updated weekly. It runs entirely on GitHub: **GitHub Pages** hosts the site and **GitHub Actions** builds it and keeps the question bank fresh.
+
+**Live site:** https://alexrayyan.github.io/Interview-preparation/ (after the one-time setup below)
+
+## Features
+
+- **Question bank**: search and filter by role, topic, difficulty, source and company. Every question links to its source with attribution.
+- **Mock interviews**: one question at a time, balanced across topics; questions you've never tried or scored low on come first.
+- **Grading**: compare against a model answer and rate yourself, or add your own Anthropic API key (Settings) for an AI interviewer that scores 1–10 with strengths, gaps, a stronger answer and the likely follow-up.
+- **Progress tracking**: weakest topics and recent sessions, saved in your browser.
+- **Community submissions**: anyone can share an interview through a GitHub issue form; approved submissions are added automatically.
+
+## How it works
+
+```
+ GitHub repos ──┐
+ Hacker News ───┼─► update-questions.yml (weekly / manual) ─► data/questions.json ─► pull request ─► review & merge ─┐
+ Stack Exchange ┤      Claude extracts questions + writes model answers                                            │
+ Reddit ────────┘                                                                                                   ▼
+ "Share your interview" issue ─► add label `approved` ─► submission.yml ─► commit to main ─────────► deploy.yml ─► GitHub Pages
+ Actions ▸ "Generate questions with AI" ─► generate.yml ─► pull request
+```
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `deploy.yml` | push to `main`, manual | Typechecks, builds the static site, publishes to Pages (PRs are build-checked only) |
+| `update-questions.yml` | Mondays 03:17 UTC, manual | Collects from all sources, extracts and classifies questions, writes missing model answers, opens a PR |
+| `submission.yml` | `approved` label on an issue | Extracts questions from a "Share your interview" issue, commits them, comments, closes the issue, redeploys |
+| `generate.yml` | manual | Claude writes new questions for a chosen topic / difficulty / company style and opens a PR |
+
+The question bank is a readable JSON file (`data/questions.json`), so every change is a normal diff you can review.
+
+## One-time setup (repository owner)
+
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
+2. **Settings → Actions → General → Workflow permissions:** choose *Read and write permissions* and tick *Allow GitHub Actions to create and approve pull requests*.
+3. **Settings → Secrets and variables → Actions → New repository secret** (all optional):
+   - `ANTHROPIC_API_KEY`: accurate extraction from posts, model answers, the Generate workflow. Without it, extraction falls back to keyword heuristics.
+   - `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`: enables the Reddit source (free "script" app at reddit.com/prefs/apps).
+   - `STACKEXCHANGE_KEY`: higher Stack Exchange quota.
+4. **Issues → Labels:** create `approved` (`interview-submission` and `question-bank` are created automatically when first used, or create them too).
+5. **Actions → Deploy site → Run workflow** for the first deploy, then **Update question bank → Run workflow** to collect from every source right away.
+
+## Data sources
+
+| Source | How | Notes |
+|---|---|---|
+| GitHub | Raw READMEs of repos listed in `lib/ingest/github.ts` | Only openly licensed repos (currently CC BY-SA 4.0 and MIT) |
+| Hacker News | Official Algolia search API | No key needed |
+| Stack Exchange | API v2.3 | CC BY-SA; author + link kept |
+| Reddit | Data API, app-only OAuth | Needs credentials; usernames not stored. Commercial use needs Reddit's agreement |
+| Community | GitHub issue form | Moderated with the `approved` label |
+
+LinkedIn, Glassdoor and LeetCode Discuss are **not** scraped: their terms prohibit it.
+
+## Developing locally (optional)
+
+```bash
+npm install
+npm run dev                                   # http://localhost:3000
+npm run update-bank -- --sources github       # refresh data/questions.json
+npm run generate -- --role data_engineer --category pipelines --difficulty medium --count 5   # needs ANTHROPIC_API_KEY
+```
+
+Stack: Next.js 15 (static export), React 19, Tailwind 4, TypeScript, Anthropic SDK (`claude-opus-5-5`, override with `CLAUDE_MODEL`).
+
+## Privacy
+
+The site has no backend. Practice history and an optional API key are stored in your browser's local storage and are never sent anywhere except, for AI grading, directly to `api.anthropic.com`.

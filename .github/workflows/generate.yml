@@ -1,0 +1,58 @@
+name: Generate questions with AI
+
+# Manually fill gaps in the bank. Opens a pull request so you can review before publishing.
+on:
+  workflow_dispatch:
+    inputs:
+      role:
+        type: choice
+        options: [data_analyst, data_engineer, both]
+        default: data_analyst
+      category:
+        type: choice
+        options: [sql, python, statistics, data_modeling, pipelines, big_data, warehousing, system_design, bi_visualization, business_case, behavioral]
+        default: sql
+      difficulty:
+        type: choice
+        options: [easy, medium, hard]
+        default: medium
+      count:
+        description: "How many (1-10)"
+        default: "5"
+      company:
+        description: "Company style (optional)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate
+        run: npm run generate -- --role "$ROLE" --category "$CATEGORY" --difficulty "$DIFFICULTY" --count "$COUNT" --company "$COMPANY"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ROLE: ${{ inputs.role }}
+          CATEGORY: ${{ inputs.category }}
+          DIFFICULTY: ${{ inputs.difficulty }}
+          COUNT: ${{ inputs.count }}
+          COMPANY: ${{ inputs.company }}
+          SUMMARY_FILE: ${{ runner.temp }}/summary.md
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automation/generated-${{ github.run_id }}
+          commit-message: "Add AI-generated ${{ inputs.category }} questions"
+          title: "AI-generated questions: ${{ inputs.category }} (${{ inputs.difficulty }})"
+          body-path: ${{ runner.temp }}/summary.md
+          add-paths: data/*.json
+          labels: question-bank
+          delete-branch: true

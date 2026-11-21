@@ -1,0 +1,37 @@
+name: Share your interview
+description: Share the questions you were asked in a Data Analyst or Data Engineer interview.
+title: "Interview: "
+labels: [interview-submission]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping others prepare! After a maintainer reviews this, the questions are added to the site automatically.
+        **This issue is public. Don't include names, emails or anything confidential.**
+  - type: input
+    id: company
+    attributes:
+      label: Company
+      description: Optional
+      placeholder: e.g. Grab
+  - type: dropdown
+    id: role
+    attributes:
+      label: Role
+      options:
+        - Data Analyst
+        - Data Engineer
+    validations:
+      required: true
+  - type: textarea
+    id: experience
+    attributes:
+      label: Interview experience
+      description: The questions you were asked, one per line works best. Add rounds or context if you like.
+      placeholder: |
+        Round 1 (SQL):
+        1. Find the top 3 products by revenue per category last month
+        2. Difference between RANK and DENSE_RANK?
+        Round 2: Design a pipeline that loads clickstream events into the warehouse.
+    validations:
+      required: true
