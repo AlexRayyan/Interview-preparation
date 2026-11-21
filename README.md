@@ -4,6 +4,8 @@ A free website for practicing real interview questions, collected from open sour
 
 **Live site:** https://alexrayyan.github.io/Interview-preparation/ (after the one-time setup below)
 
+See the [design document](docs/DESIGN.md) for a short overview of how everything fits together.
+
 ## Features
 
 - **Question bank**: search and filter by role, topic, difficulty, source and company. Every question links to its source with attribution.
