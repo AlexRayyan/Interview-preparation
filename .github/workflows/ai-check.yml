@@ -19,6 +19,20 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Which AI keys can this workflow see? (values are never printed)
+        env:
+          S_AI: ${{ secrets.AI_API_KEY != '' }}
+          S_GROQ: ${{ secrets.GROQ_API_KEY != '' }}
+          S_GEMINI: ${{ secrets.GEMINI_API_KEY != '' }}
+          S_OPENROUTER: ${{ secrets.OPENROUTER_API_KEY != '' }}
+          V_GROQ: ${{ vars.GROQ_API_KEY != '' }}
+          V_GEMINI: ${{ vars.GEMINI_API_KEY != '' }}
+          V_OPENROUTER: ${{ vars.OPENROUTER_API_KEY != '' }}
+        run: |
+          echo "Repository secrets:  AI_API_KEY=$S_AI  GROQ_API_KEY=$S_GROQ  GEMINI_API_KEY=$S_GEMINI  OPENROUTER_API_KEY=$S_OPENROUTER"
+          if [ "$V_GROQ$V_GEMINI$V_OPENROUTER" != "falsefalsefalse" ]; then
+            echo "::warning::A key was added as a repository VARIABLE, not a SECRET. Delete it under Settings > Secrets and variables > Actions > Variables and add it on the Secrets tab instead."
+          fi
       - name: Call the AI provider
         run: npx tsx scripts/ai-check.ts
         env:
