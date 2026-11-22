@@ -19,7 +19,7 @@ import { chatJson, envConfig } from "../lib/llm";
       schema: z.object({ reply: z.string() }),
       maxTokens: 50,
     });
-    console.log(`OK: the model replied ${JSON.stringify(out.reply)}. AI extraction will work.`);
+    console.log(`OK: ${cfg.model} replied ${JSON.stringify(out.reply)}. AI extraction will work.`);
   } catch (e) {
     console.log(`FAILED: ${e instanceof Error ? e.message : String(e)}`);
     process.exit(1);

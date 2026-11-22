@@ -81,7 +81,23 @@ async function chat(cfg: LlmConfig, messages: ChatMessage[], opts: { maxTokens: 
     // GitHub Models expects GitHub's REST headers
     ...(isGitHub ? { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" } : { Accept: "application/json" }),
   };
-  const send = (json: boolean) =>
+  const send = async (json: boolean): Promise<Response> => {
+    const r = await post(json);
+    // Providers retire models regularly: if the configured one is gone, pick an available one and retry.
+    if (r.status === 404 || r.status === 400) {
+      const text = await r.clone().text();
+      if (/model_not_found|does not exist|decommissioned|not supported.*model|unknown model/i.test(text)) {
+        const replacement = await pickAvailableModel(cfg, headers);
+        if (replacement && replacement !== cfg.model) {
+          console.warn(`Model "${cfg.model}" is unavailable at ${new URL(cfg.baseUrl).host}; switching to "${replacement}". Set the AI_MODEL variable to choose one.`);
+          cfg.model = replacement;
+          return post(json);
+        }
+      }
+    }
+    return r;
+  };
+  const post = (json: boolean) =>
     fetch(`${cfg.baseUrl}/chat/completions`, {
       method: "POST",
       headers,
@@ -116,6 +132,26 @@ async function chat(cfg: LlmConfig, messages: ChatMessage[], opts: { maxTokens: 
   if (!choice?.message?.content) throw new Error(`Empty response from ${cfg.model}`);
   if (choice.finish_reason === "length") throw new Error(`Response from ${cfg.model} was cut off (max_tokens)`);
   return choice.message.content;
+}
+
+const PREFERRED_MODELS = [/gpt-oss-120b/i, /llama-4-maverick/i, /llama-4-scout/i, /llama.*70b/i, /qwen3?.*(32b|235b)/i, /kimi/i, /deepseek/i, /gemini.*flash/i, /gpt-oss-20b/i, /llama.*8b/i];
+const NON_CHAT = /whisper|tts|guard|embed|playai|orpheus|compound|vision-preview|moderation|audio/i;
+
+/** Lists the provider's models (OpenAI-compatible GET /models) and picks the best general chat model. */
+export async function pickAvailableModel(cfg: LlmConfig, headers: Record<string, string>): Promise<string | null> {
+  try {
+    const res = await fetch(`${cfg.baseUrl}/models`, { headers });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { data?: { id: string; active?: boolean }[] };
+    const ids = (data.data ?? []).filter((m) => m.active !== false && !NON_CHAT.test(m.id)).map((m) => m.id.replace(/^models\//, ""));
+    for (const re of PREFERRED_MODELS) {
+      const hit = ids.find((id) => re.test(id));
+      if (hit) return hit;
+    }
+    return ids[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** Pulls the first JSON object out of a model reply (tolerates ```json fences and surrounding prose). */
