@@ -24,8 +24,20 @@ const KEYED_PROVIDERS = [
  * Precedence: AI_API_KEY (+ AI_BASE_URL / AI_MODEL) > GROQ_API_KEY > GEMINI_API_KEY > OPENROUTER_API_KEY > GITHUB_TOKEN (GitHub Models).
  * AI_MODEL overrides the model in every case.
  */
+/** Tolerates common copy-paste mistakes: surrounding whitespace/quotes, a "Bearer " prefix, NAME=value. */
+export function cleanKey(raw: string | undefined): string {
+  if (!raw) return "";
+  let k = raw.trim();
+  k = k.replace(/^[A-Z_]+_API_KEY\s*=\s*/, "");
+  k = k.replace(/^bearer\s+/i, "");
+  k = k.replace(/^["'`]+|["'`]+$/g, "");
+  return k.replace(/\s+/g, "");
+}
+
 export function envConfig(): LlmConfig | null {
-  const env = typeof process !== "undefined" ? process.env : ({} as Record<string, string | undefined>);
+  const rawEnv = typeof process !== "undefined" ? process.env : ({} as Record<string, string | undefined>);
+  const env: Record<string, string | undefined> = { ...rawEnv };
+  for (const k of ["AI_API_KEY", "GROQ_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY"]) env[k] = cleanKey(rawEnv[k]);
   const model = env.AI_MODEL || "";
   if (env.AI_API_KEY) {
     return { baseUrl: (env.AI_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, ""), apiKey: env.AI_API_KEY, model: model || DEFAULT_MODEL };

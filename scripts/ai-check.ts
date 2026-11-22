@@ -9,6 +9,9 @@ import { chatJson, envConfig } from "../lib/llm";
     process.exit(1);
   }
   console.log(`Provider: ${cfg.baseUrl}\nModel:    ${cfg.model}`);
+  // shape only, never the key itself
+  const k = cfg.apiKey;
+  console.log(`Key shape: ${k.length} characters, starts with "${k.slice(0, 4)}"${/^gsk_/.test(k) ? " (looks like a Groq key)" : ""}`);
   try {
     const out = await chatJson(cfg, {
       system: "You are a connectivity check.",
