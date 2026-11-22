@@ -17,7 +17,7 @@ import { chatJson, envConfig } from "../lib/llm";
       system: "You are a connectivity check.",
       user: 'Return {"reply": "pong"}.',
       schema: z.object({ reply: z.string() }),
-      maxTokens: 50,
+      maxTokens: 300,
     });
     console.log(`OK: ${cfg.model} replied ${JSON.stringify(out.reply)}. AI extraction will work.`);
   } catch (e) {

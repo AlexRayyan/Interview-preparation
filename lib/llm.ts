@@ -105,11 +105,21 @@ async function chat(cfg: LlmConfig, messages: ChatMessage[], opts: { maxTokens: 
         model: cfg.model,
         messages,
         temperature: 0.2,
-        max_tokens: opts.maxTokens,
+        max_tokens: isReasoningModel(cfg.model) ? opts.maxTokens + 4000 : opts.maxTokens,
+        ...(isReasoningModel(cfg.model) && /groq\.com/.test(cfg.baseUrl) ? { reasoning_effort: "low" } : {}),
         ...(json ? { response_format: { type: "json_object" } } : {}),
       }),
     });
   let res = await send(opts.json);
+  // Per-minute limits (requests or tokens) reset quickly: wait and retry a few times before giving up.
+  for (let attempt = 0; res.status === 429 && attempt < 3; attempt++) {
+    const ra = Number(res.headers.get("retry-after"));
+    const waitS = Number.isFinite(ra) && ra > 0 ? ra : 20 * (attempt + 1);
+    if (waitS > 90) break; // a daily limit: stop and let the next run continue
+    console.warn(`Rate limited by ${new URL(cfg.baseUrl).host}; waiting ${Math.ceil(waitS)}s`);
+    await new Promise((r) => setTimeout(r, waitS * 1000 + 250));
+    res = await send(opts.json);
+  }
   // Some providers/models reject response_format; retry once without it (the prompt still asks for JSON).
   if (res.status === 400 && opts.json) {
     const text = await res.text();
@@ -134,7 +144,10 @@ async function chat(cfg: LlmConfig, messages: ChatMessage[], opts: { maxTokens: 
   return choice.message.content;
 }
 
-const PREFERRED_MODELS = [/gpt-oss-120b/i, /llama-4-maverick/i, /llama-4-scout/i, /llama.*70b/i, /qwen3?.*(32b|235b)/i, /kimi/i, /deepseek/i, /gemini.*flash/i, /gpt-oss-20b/i, /llama.*8b/i];
+// Non-reasoning models first: they answer directly (no hidden reasoning tokens) and have higher free limits.
+const PREFERRED_MODELS = [/llama-4-scout/i, /llama-4-maverick/i, /llama.*70b/i, /kimi/i, /gemini.*flash/i, /gpt-oss-120b/i, /qwen3?.*(32b|235b)/i, /deepseek/i, /gpt-oss-20b/i, /llama.*8b/i];
+/** Reasoning models spend output tokens thinking first; ask them to keep it short. */
+const isReasoningModel = (m: string) => /gpt-oss|qwen3|deepseek-r1|o\d-|magistral/i.test(m);
 const NON_CHAT = /whisper|tts|guard|embed|playai|orpheus|compound|vision-preview|moderation|audio/i;
 
 /** Lists the provider's models (OpenAI-compatible GET /models) and picks the best general chat model. */
