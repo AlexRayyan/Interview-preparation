@@ -17,8 +17,9 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 (async () => {
   const store = new Store();
   const sources = (arg("sources") ?? Object.keys(CONNECTORS).join(",")).split(",").map((s) => s.trim()).filter(Boolean);
-  const limit = Number(arg("limit") ?? 100);
-  const answerBudget = Number(arg("answers") ?? 60);
+  const num = (v: string | undefined, d: number) => (v && Number(v) > 0 ? Number(v) : d); // empty/invalid -> default
+  const limit = num(arg("limit"), 100);
+  const answerBudget = arg("answers") === "0" ? 0 : num(arg("answers"), 60);
   const maxAiPosts = Number(process.env.AI_MAX_POSTS || 150);
   const cfg = envConfig();
   process.env.AI_MIN_INTERVAL_MS ||= "4500"; // ~13 requests/minute, under free-tier limits

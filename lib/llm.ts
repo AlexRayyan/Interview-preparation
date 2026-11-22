@@ -191,8 +191,10 @@ export async function chatJson<T extends z.ZodType>(
     { role: "user", content: opts.user },
   ];
   let lastError = "";
+  let lastReply = "";
   for (let attempt = 0; attempt < 2; attempt++) {
     const reply = await chat(cfg, messages, { maxTokens: opts.maxTokens ?? 3000, json: true });
+    lastReply = reply;
     try {
       return opts.schema.parse(extractJson(reply));
     } catch (e) {
@@ -200,5 +202,5 @@ export async function chatJson<T extends z.ZodType>(
       messages.push({ role: "assistant", content: reply }, { role: "user", content: `That reply was invalid: ${lastError}\nReply again with corrected JSON only.` });
     }
   }
-  throw new Error(`Model output did not match the expected format: ${lastError.slice(0, 300)}`);
+  throw new Error(`Model output did not match the expected format: ${lastError.slice(0, 300)} | reply started: ${JSON.stringify(lastReply.slice(0, 160))}`);
 }

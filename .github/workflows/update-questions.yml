@@ -41,7 +41,8 @@ jobs:
         run: npm run update-bank -- --sources "$SOURCES" --answers "$ANSWERS" --limit "$LIMIT"
         env:
           SOURCES: ${{ inputs.sources || 'github,hackernews,stackexchange,reddit' }}
-          ANSWERS: ${{ inputs.answers || '40' }}
+          ANSWERS: ${{ inputs.answers || '60' }}
+          LIMIT: ${{ inputs.limit || '100' }}
           # Free AI: add ONE of the GROQ_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY secrets (free keys).
           # Any other OpenAI-compatible provider: AI_API_KEY secret + AI_BASE_URL / AI_MODEL variables.
           # With none of them, GitHub Models is tried via the built-in token.
