@@ -11,7 +11,7 @@ import { chatJson, envConfig } from "../lib/llm";
   console.log(`Provider: ${cfg.baseUrl}\nModel:    ${cfg.model}`);
   // shape only, never the key itself
   const k = cfg.apiKey;
-  console.log(`Key shape: ${k.length} characters, starts with "${k.slice(0, 4)}"${/^gsk_/.test(k) ? " (looks like a Groq key)" : ""}`);
+  console.log(`Key length: ${k.length} characters${k.length < 30 ? " (too short: real keys are about 40-60 characters, so only part of it was pasted)" : ""}`);
   try {
     const out = await chatJson(cfg, {
       system: "You are a connectivity check.",
