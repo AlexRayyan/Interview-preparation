@@ -167,10 +167,16 @@ export async function pickAvailableModel(cfg: LlmConfig, headers: Record<string,
   }
 }
 
-/** Pulls the first JSON object out of a model reply (tolerates ```json fences and surrounding prose). */
+/** Pulls the JSON object out of a model reply (tolerates a wrapping ```json fence and surrounding prose). */
 export function extractJson(text: string): unknown {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced ? fenced[1] : text;
+  const t = text.trim();
+  try {
+    return JSON.parse(t); // the normal case: the whole reply is JSON (answers may contain ``` code blocks inside strings)
+  } catch {
+    /* fall through */
+  }
+  const wrapped = t.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i); // reply wrapped in a single fence
+  const candidate = wrapped ? wrapped[1] : t;
   const start = candidate.indexOf("{");
   const end = candidate.lastIndexOf("}");
   if (start === -1 || end <= start) throw new Error("No JSON object in model response");
