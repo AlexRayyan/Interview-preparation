@@ -14,7 +14,7 @@ export const DEFAULT_MODEL = "openai/gpt-4.1-mini";
 
 /** Free providers picked up automatically from a secret named after them (checked in this order). */
 const KEYED_PROVIDERS = [
-  { env: "GROQ_API_KEY", baseUrl: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile" },
+  { env: "GROQ_API_KEY", baseUrl: "https://api.groq.com/openai/v1", model: "openai/gpt-oss-120b" },
   { env: "GEMINI_API_KEY", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-flash" },
   { env: "OPENROUTER_API_KEY", baseUrl: "https://openrouter.ai/api/v1", model: "meta-llama/llama-3.3-70b-instruct:free" },
 ] as const;
